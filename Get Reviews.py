@@ -41,7 +41,7 @@ def get_reviews(app_id):
             cursor = reviews_json["cursor"]
         else:
             break
-        n -= 100
+        n -= 200
     
     return reviews
 
@@ -64,3 +64,15 @@ df_2.to_csv('GTA_IV.csv', index=False)
 game_3_name = 'Grand Theft Auto: San Andreas'
 app_id_3 = get_app_id(game_3_name)
 app_id_3
+
+reviews_3 = get_reviews(app_id_3)
+df_3 = pd.DataFrame(reviews_3)
+
+df_3.to_csv('GTA_VC.csv', index=False)
+
+game_4_name = 'Grand Theft Auto III'
+app_id_4  = '12100' # Repeatedly pulled the game ID for GTA V
+
+reviews_4 = get_reviews(app_id_4)
+df_4 = pd.DataFrame(reviews_4)
+df_4.to_csv('GTA_III.csv', index =False)
