@@ -45,11 +45,22 @@ def get_reviews(app_id):
     
     return reviews
 
-game_name = "Grand Theft Auto V"
-app_id = get_app_id(game_name)
-reviews = get_reviews(app_id)
+# game_name = "Grand Theft Auto V"
+# app_id = get_app_id(game_name)
+# reviews = get_reviews(app_id)
 
-df = pd.DataFrame(reviews)
-df.to_csv('GTA_V.csv', index =False)
+# df = pd.DataFrame(reviews)
+# df.to_csv('GTA_V.csv', index =False)
 
-game_name_2
+game_2_name= 'Grand Theft Auto Chinatown Wars' # This title belongs to bundle of GTA IV: The Complete Edition
+app_id_2 = get_app_id(game_2_name)
+
+
+reviews_2 = get_reviews(app_id_2)
+df_2 = pd.DataFrame(reviews_2)
+df_2.info()
+df_2.to_csv('GTA_IV.csv', index=False)
+
+game_3_name = 'Grand Theft Auto: San Andreas'
+app_id_3 = get_app_id(game_3_name)
+app_id_3
