@@ -28,7 +28,7 @@ def get_reviews(app_id):
         "language": "english"
     }
     reviews = []
-    n = 10000 # set the number of reviews you want to fetch
+    n = 50000 # set the number of reviews you want to fetch
 
     while n > 0:
         params['cursor'] = cursor.encode()
@@ -49,6 +49,7 @@ game_name = "Grand Theft Auto V"
 app_id = get_app_id(game_name)
 reviews = get_reviews(app_id)
 
-
 df = pd.DataFrame(reviews)
-df.info()
+df.to_csv('GTA_V.csv', index =False)
+
+game_name_2
