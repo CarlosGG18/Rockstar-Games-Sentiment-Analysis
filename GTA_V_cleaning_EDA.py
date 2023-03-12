@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
-
+import datetime
 
 import re
 import string
@@ -46,6 +46,13 @@ df.info()
 df['num_games_owned'].describe()
 games_owned_outlier = df.loc[df['num_games_owned']== 16506.000000] # despite this record being an outlier for owned the review is real and needs to be kept 
 print(games_owned_outlier.loc[22565, 'review'])
+
+#Define function to convert a Unix timestamp to a datetime object
+def unix_to_datetime(timestamp):
+    return datetime.datetime.fromtimestamp(timestamp)
+df["last_played"] = df["last_played"].apply(unix_to_datetime)
+df['playtime_at_review']
+
 
 #Comment Count 
 df['comment_count'].value_counts(normalize=True) # Wont be needing this due to huge imbalance
@@ -140,6 +147,28 @@ ax2.imshow(wordcloud)
 ax2.set_title("Word Cloud of Preprocessed Steam Reviews", fontsize=16)
 ax2.axis("off")
 
-# Display the plots
+# Display both plots
 plt.tight_layout()
 plt.show()
+df.info()
+
+# Reviews w.thumbs up contribution
+df['playtime_forever'].describe()
+playtime_mean = df['playtime_forever'].mean()
+df_filtered = df[df['playtime_forever'] > playtime_mean]
+df_filtered.info()
+
+# list of words by concatenating all the preprocessed text in the filtered df
+words = [word for text in df_filtered['preprocessed_text'] for word in text]
+freq_dist_2 = FreqDist(words)
+fdist_2 = {k: v for k, v in freq_dist.items()}
+
+wordcloud_2= WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(fdist)
+
+# Display the word cloud
+plt.figure(figsize=(8, 8), facecolor=None)
+plt.imshow(wordcloud_2)
+plt.axis("off")
+plt.tight_layout(pad=0)
+
+
