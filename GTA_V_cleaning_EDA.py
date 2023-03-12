@@ -3,6 +3,7 @@ import numpy as np
 import os 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from wordcloud import WordCloud
 
 
 import re
@@ -10,11 +11,14 @@ import string
 import itertools
 
 import nltk
-from nltk import stopwords
+from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
+from nltk import pos_tag
 from nltk.tokenize import regexp_tokenize, word_tokenize, RegexpTokenizer
 from nltk.probability import FreqDist
 import langid
-nltk.download('punkt') #word_tokenize wont work without
+
+# nltk.download('punkt') #word_tokenize wont work without
 
 df = pd.read_csv('GTA_V.csv')
 df.info()
@@ -73,11 +77,69 @@ def preprocess_text(text, stopwords_list, lemmatizer):
     tokens = word_tokenize(text)
     
     #Remove stopwords
-    filtered_tokens = [token for token in tokens if not in stopwords_list]
+    filtered_tokens = [token for token in tokens if token not in stopwords_list]
 
     #Lemmitize 
     lemmitized_tokens = [lemmatizer.lemmatize(token) for token in filtered_tokens]
 
-    return lemmitized_tokens
+    #Perform POS tagging
+    pos_tagged_tokens = pos_tag(lemmitized_tokens)
 
-preprocessed_df = df['review'].apply(lambda x: preprocess_text(x,stopwords, lemmatizer))
+    return pos_tagged_tokens
+
+df['preprocessed_text'] = df['review'].apply(lambda x: preprocess_text(x,stopwords, lemmatizer))
+df['preprocessed_text']
+
+num_empty = df['preprocessed_text'].apply(lambda x: len(x) == 0).sum()
+empty_rows = df[df['preprocessed_text'].apply(lambda x: len(x)) == 0].index
+
+print(f"There are {num_empty} empty rows.")
+
+missing_tags = []
+
+for doc in df['preprocessed_text']:
+    for token in doc:
+        if len(token) != 2:
+            missing_tags.append(token)
+            
+if len(missing_tags) > 0:
+    print("The following tokens are missing a POS tag:", missing_tags)
+else:
+    print("All tokens have a corresponding POS tag.")
+
+df = df.drop(empty_rows)
+df.info()
+df['preprocessed_text']
+
+
+#Word frequency wordcloud & Barchart
+
+freq_dist = FreqDist(df["preprocessed_text"].explode())
+fdist = {k[0]:v for k, v in freq_dist.items()}
+
+# Get the top 20 most frequent words from the frequency distribution
+top_words = freq_dist.most_common(20)
+
+# Extract the words and their frequencies as separate lists
+words = [word[0][0] for word in top_words]
+frequencies = [word[1] for word in top_words]
+
+# Bar chart
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 8))
+ax1, ax2 = axes.flatten()
+ax1.bar(words, frequencies)
+ax1.set_title("Frequency Distribution of Preprocessed Steam Reviews", fontsize=16)
+ax1.set_xlabel("Words", fontsize=14)
+ax1.set_ylabel("Frequency", fontsize=14)
+plt.setp(ax1.get_xticklabels(), rotation=45, ha="right", fontsize=12)
+
+# WordCloud object and display it in the second subplot
+fdist = {k[0]: v for k, v in freq_dist.items()}
+wordcloud = WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(fdist)
+ax2.imshow(wordcloud)
+ax2.set_title("Word Cloud of Preprocessed Steam Reviews", fontsize=16)
+ax2.axis("off")
+
+# Display the plots
+plt.tight_layout()
+plt.show()
