@@ -159,11 +159,11 @@ df_filtered = df[df['playtime_forever'] > playtime_mean]
 df_filtered.info()
 
 # list of words by concatenating all the preprocessed text in the filtered df
-words = [word for text in df_filtered['preprocessed_text'] for word in text]
-freq_dist_2 = FreqDist(words)
+words_2= [word for text in df_filtered['preprocessed_text'] for word in text]
+freq_dist_2 = FreqDist(words_2)
 fdist_2 = {k: v for k, v in freq_dist.items()}
 
-wordcloud_2= WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(fdist)
+wordcloud_2= WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(fdist_2)
 
 # Display the word cloud
 plt.figure(figsize=(8, 8), facecolor=None)
