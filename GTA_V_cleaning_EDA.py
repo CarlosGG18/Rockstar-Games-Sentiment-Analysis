@@ -17,6 +17,8 @@ from nltk import pos_tag
 from nltk.tokenize import regexp_tokenize, word_tokenize, RegexpTokenizer
 from nltk.probability import FreqDist
 import langid
+from nltk.collocations import BigramAssocMeasures, BigramCollocationFinder, TrigramAssocMeasures, TrigramCollocationFinder
+
 
 # nltk.download('punkt') #word_tokenize wont work without
 
@@ -152,23 +154,56 @@ plt.tight_layout()
 plt.show()
 df.info()
 
-# Reviews w.thumbs up contribution
+
+
+# Reviews w.Playtime mean contribution as those users played the game more than average amount
 df['playtime_forever'].describe()
 playtime_mean = df['playtime_forever'].mean()
-df_filtered = df[df['playtime_forever'] > playtime_mean]
+df_filtered = df[df['playtime_forever'] >= playtime_mean]
 df_filtered.info()
 
 # list of words by concatenating all the preprocessed text in the filtered df
-words_2= [word for text in df_filtered['preprocessed_text'] for word in text]
-freq_dist_2 = FreqDist(words_2)
-fdist_2 = {k: v for k, v in freq_dist.items()}
+freq_dist_2 = FreqDist(df_filtered['preprocessed_text'].explode())
+top_words_2= freq_dist_2.most_common(20)
+words_2, freqs = zip(*top_words_2)
+words = [w[0] for w in words_2]
 
-wordcloud_2= WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(fdist_2)
+# Plot the frequencies
+plt.bar(words, freqs)
+plt.xticks(rotation=90)
+plt.show()
 
-# Display the word cloud
-plt.figure(figsize=(8, 8), facecolor=None)
-plt.imshow(wordcloud_2)
-plt.axis("off")
-plt.tight_layout(pad=0)
 
+
+#### Review of users that voted down comment
+
+voted_down = df[df['voted_up']==False]
+voted_down_freq = FreqDist(voted_down['preprocessed_text'].explode())
+top_voted_down = voted_down_freq.most_common(20)
+words_3, freqs_2 = zip(*top_voted_down)
+words = [w[0] for w in words_3]
+plt.bar(words, freqs_2)
+plt.xticks(rotation=90)
+plt.show()
+
+
+### single words do not provide much insight of what features of games are liked vs disliked
+
+### Bi grams with and withour voted_up 
+
+df['cleaned_text'] = df['preprocessed_text'].apply(lambda x: [word[0] for word in x])
+bigram_measures = BigramAssocMeasures()
+finder = BigramCollocationFinder.from_words(df['cleaned_text'].sum())
+finder.apply_freq_filter(5)  # filter out low-frequency bigrams
+bigrams = finder.nbest(bigram_measures.raw_freq, 50)  # get top 50 bigrams by frequency
+print(bigrams)
+
+words = [word[0] for i, row in df[df['voted_up']].iterrows() for word in row['preprocessed_text']]
+bigram_measures = BigramAssocMeasures()
+finder = BigramCollocationFinder.from_words(words)
+scored_bigrams = finder.score_ngrams(bigram_measures.raw_freq)
+for bigram in scored_bigrams[:10]:
+    print(bigram)
+
+### Tri grams with and withour voted_up 
 
