@@ -20,6 +20,8 @@ import langid
 from nltk.collocations import BigramAssocMeasures, BigramCollocationFinder, TrigramAssocMeasures, TrigramCollocationFinder
 
 from afinn import Afinn
+from plotnine import ggplot, aes, geom_bar, labs, xlim
+
 
 
 # nltk.download('punkt') #word_tokenize wont work without
@@ -222,13 +224,39 @@ for trigram in scored_trigrams[:10]:
 #The repetitive words in the output suggest that the bigrams or trigrams are not capturing the sentiment well. Using AFINN 
 afinn = Afinn()
 afinn.score('love')
-afinn.score('hate')
+afinn.score('toxic')
+
+test = df['cleaned_text'][8]
+test_text = ' '.join(test)
+score = afinn.score(test_text)
+print(score)
+
 
 def calculate_sentiment_score(text):
-    afinn = Afinn()
-    text_str = ' '.join(text)
-    return afinn.score(text_str)
+    return afinn.score_with_pattern(text)
 
-df['sentiment_score'] = df['cleaned_text'].apply(calculate_sentiment_score)
+df['sentiment_score'] = df['cleaned_text'].apply(lambda x: calculate_sentiment_score(' '.join(word[0] for word in x)))
 df['sentiment_score'].describe()
-df['cleaned_text']
+
+df.loc[df['sentiment_score']==-270]
+
+(ggplot(df, aes(x='sentiment_score')) 
+ + geom_bar() 
+ + labs(x="Sentiment Score", y="Frequency") 
+ + xlim(-5, 5)
+)
+negative_reviews = df[df['sentiment_score'] < 0]
+sample_neg_reviews = negative_reviews.sample(n=10, random_state=42)
+
+for index, row in sample_neg_reviews.iterrows():
+    print(f"Review: {' '.join(row['cleaned_text'])}")
+    print(f"Sentiment score: {row['sentiment_score']}\n")
+
+positive_reviews = df[df['sentiment_score']>0]
+sample_pos_reviews = positive_reviews.sample(n=10, random_state=42)
+for index, row in sample_pos_reviews.iterrows():
+    print(f"Review: {' '.join(row['cleaned_text'])}")
+    print(f"Sentiment score: {row['sentiment_score']}\n")
+### Overall sentiment using AFINN shows that game rarely gets below a nuetral (0) but also has just as many users with positive sentiment as nuetral
+
+###Need to SentiWordNet include POS_TAG
