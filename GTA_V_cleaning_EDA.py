@@ -19,6 +19,8 @@ from nltk.probability import FreqDist
 import langid
 from nltk.collocations import BigramAssocMeasures, BigramCollocationFinder, TrigramAssocMeasures, TrigramCollocationFinder
 
+from afinn import Afinn
+
 
 # nltk.download('punkt') #word_tokenize wont work without
 
@@ -173,7 +175,8 @@ plt.bar(words, freqs)
 plt.xticks(rotation=90)
 plt.show()
 
-
+df['preprocessed_text']
+df['cleaned_text']
 
 #### Review of users that voted down comment
 
@@ -189,7 +192,7 @@ plt.show()
 
 ### single words do not provide much insight of what features of games are liked vs disliked
 
-### Bi grams with and withour voted_up 
+### Bi grams with and without voted_up 
 
 df['cleaned_text'] = df['preprocessed_text'].apply(lambda x: [word[0] for word in x])
 bigram_measures = BigramAssocMeasures()
@@ -206,4 +209,26 @@ for bigram in scored_bigrams[:10]:
     print(bigram)
 
 ### Tri grams with and withour voted_up 
+words = [word[0] for index, row in df.iterrows() if row['voted_up'] == True for word in row['preprocessed_text']]
+trigram_measures = TrigramAssocMeasures()
+finder = TrigramCollocationFinder.from_words(words)
+scored_trigrams = finder.score_ngrams(trigram_measures.raw_freq)
 
+# Print the top 10 scored trigrams
+for trigram in scored_trigrams[:10]:
+    print(trigram)
+
+
+#The repetitive words in the output suggest that the bigrams or trigrams are not capturing the sentiment well. Using AFINN 
+afinn = Afinn()
+afinn.score('love')
+afinn.score('hate')
+
+def calculate_sentiment_score(text):
+    afinn = Afinn()
+    text_str = ' '.join(text)
+    return afinn.score(text_str)
+
+df['sentiment_score'] = df['cleaned_text'].apply(calculate_sentiment_score)
+df['sentiment_score'].describe()
+df['cleaned_text']
