@@ -8,6 +8,7 @@ import itertools
 
 import nltk 
 from nltk.corpus import sentiwordnet as swn 
+nltk.download('omw-1.4')
 
 from afinn import Afinn
 from plotnine import ggplot, aes, geom_bar, labs, xlim
@@ -15,26 +16,30 @@ from plotnine import ggplot, aes, geom_bar, labs, xlim
 import gensim
 from gensim import corpora
 from gensim.models import LdaModel
+from gensim.models import CoherenceModel
+
 
 df = pd.read_csv('GTA_V_cleaned.csv')
+df.head()
 
 afinn = Afinn()
 afinn.score('love')
 afinn.score('toxic')
 
-test = df['cleaned_text'][8]
+test = df['cleaned_text'][10]
 test_text = ' '.join(test)
-score = afinn.score(test_text)
+score = afinn.score(test)
 print(score)
 
 
 def calculate_sentiment_score(text):
-    return afinn.score_with_pattern(text)
+    return afinn.score(text)
 
-df['sentiment_score'] = df['cleaned_text'].apply(lambda x: calculate_sentiment_score(' '.join(word[0] for word in x)))
+df['sentiment_score'] = df['cleaned_text'].apply(calculate_sentiment_score)
 df['sentiment_score'].describe()
 
-df.loc[df['sentiment_score']==-270]
+lower_outl = df.loc[df['sentiment_score']==-270]
+lower_outl['review']
 
 (ggplot(df, aes(x='sentiment_score')) 
  + geom_bar() 
@@ -43,6 +48,8 @@ df.loc[df['sentiment_score']==-270]
 )
 negative_reviews = df[df['sentiment_score'] < 0]
 sample_neg_reviews = negative_reviews.sample(n=10, random_state=42)
+sample_neg_reviews
+
 
 for index, row in sample_neg_reviews.iterrows():
     print(f"Review: {' '.join(row['cleaned_text'])}")
@@ -71,11 +78,36 @@ if len(list(synsets)) >0:
     neg_score /= len(synsets)
     obj_score /= len(synsets)
 print(f"Positive score: {pos_score:.2f}, Negative score: {neg_score:.2f}, Objective score: {obj_score:.2f}") #Retirating what previously seen, overall postive from all collected words
-df['preprocessed_text']
-preprocessed_docs = [[word for word, tag in doc] for doc in df['preprocessed_text']]
+df['cleaned_text']
+
+
+preprocessed_docs = [doc.split() for doc in df['cleaned_text']]
 dictionary = corpora.Dictionary(preprocessed_docs)
 corpus = [dictionary.doc2bow(text) for text in preprocessed_docs]
-lda_model = gensim.models.LdaModel(corpus=corpus, id2word=dictionary, num_topics=10, passes=10)
+texts = [eval(text) for text in df['cleaned_text']]
+coherence_dict = gensim.corpora.Dictionary(texts)
+num_topics = 8
+lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
+                                            id2word=dictionary,
+                                            num_topics=num_topics,
+                                            random_state=42,
+                                            passes=10,
+                                            per_word_topics=True)
 
 for idx, topic in lda_model.print_topics(-1):
-    print("Topic: {}\nWords: {}".format(idx, topic))
+    print(f'Topic: {idx}')
+    keywords = ", ".join(word for word, _ in lda_model.show_topic(idx, topn=10))
+    print(f'Top Keywords: {keywords}\n')
+
+
+
+coherence_model = CoherenceModel(
+    model=lda_model,
+    texts=texts,
+    dictionary=dictionary,
+    coherence='c_v'
+)
+
+coherence_score = coherence_model.get_coherence()
+print(f"Coherence Score: {coherence_score}")
+# def get_topic_name(model, idx, num_words = 3):
