@@ -12,6 +12,8 @@ import itertools
 
 import nltk
 from nltk.corpus import stopwords
+from nltk.corpus import sentiwordnet as swn
+from nltk.stem import WordNetLemmatizer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from nltk.tokenize import regexp_tokenize, word_tokenize, RegexpTokenizer
@@ -19,12 +21,6 @@ from nltk.probability import FreqDist
 import langid
 from nltk.collocations import BigramAssocMeasures, BigramCollocationFinder, TrigramAssocMeasures, TrigramCollocationFinder
 
-from afinn import Afinn
-from plotnine import ggplot, aes, geom_bar, labs, xlim
-
-
-
-# nltk.download('punkt') #word_tokenize wont work without
 
 df = pd.read_csv('GTA_V.csv')
 df.info()
@@ -74,33 +70,29 @@ plt.show()
 stopwords = stopwords.words('english')
 lemmatizer = WordNetLemmatizer()
 
-def preprocess_text(text, stopwords_list, lemmatizer, dictionary):
+def preprocess_text(text, stopwords_list, lemmatizer):
     # If language is not english or has confidence below 0.5 returns empty list
     lang, confidence = langid.classify(text)
     if lang != 'en' or confidence < 0.5:
         return []
     
-    # Lowercase text
+    #Lowercase text
     text = text.lower()
 
-    # Removing numbers and punctuation
+    #Removing numbers and punctuation
     text = re.sub(r'\d+', '', text)
     text = text.translate(str.maketrans('', '', string.punctuation))
 
     tokens = word_tokenize(text)
     
-    # Remove stopwords
+    #Remove stopwords
     filtered_tokens = [token for token in tokens if token not in stopwords_list]
 
-    # Lemmatize 
+    #Lemmitize 
     lemmitized_tokens = [lemmatizer.lemmatize(token) for token in filtered_tokens]
 
-    # Filter out words that appear in less than 5 documents 
-    bow = dictionary.doc2bow(lemmitized_tokens)
-    filtered_tokens = [token for token in lemmitized_tokens if dictionary[bow][dictionary.token2id[token]] >=5 and dictionary[bow][dictionary.token2id[token]] <=0.5* len(dictionary)]
-
-    # Perform POS tagging
-    pos_tagged_tokens = pos_tag(filtered_tokens)
+    #Perform POS tagging
+    pos_tagged_tokens = pos_tag(lemmitized_tokens)
 
     return pos_tagged_tokens
 
@@ -162,8 +154,6 @@ plt.tight_layout()
 plt.show()
 df.info()
 
-
-
 # Reviews w.Playtime mean contribution as those users played the game more than average amount
 df['playtime_forever'].describe()
 playtime_mean = df['playtime_forever'].mean()
@@ -224,44 +214,6 @@ scored_trigrams = finder.score_ngrams(trigram_measures.raw_freq)
 for trigram in scored_trigrams[:10]:
     print(trigram)
 
+df.to_csv('GTA_V_cleaned.csv', index=False)
 
 #The repetitive words in the output suggest that the bigrams or trigrams are not capturing the sentiment well. Using AFINN 
-afinn = Afinn()
-afinn.score('love')
-afinn.score('toxic')
-
-test = df['cleaned_text'][8]
-test_text = ' '.join(test)
-score = afinn.score(test_text)
-print(score)
-
-
-def calculate_sentiment_score(text):
-    return afinn.score_with_pattern(text)
-
-df['sentiment_score'] = df['cleaned_text'].apply(lambda x: calculate_sentiment_score(' '.join(word[0] for word in x)))
-df['sentiment_score'].describe()
-
-df.loc[df['sentiment_score']==-270]
-
-(ggplot(df, aes(x='sentiment_score')) 
- + geom_bar() 
- + labs(x="Sentiment Score", y="Frequency") 
- + xlim(-5, 5)
-)
-negative_reviews = df[df['sentiment_score'] < 0]
-sample_neg_reviews = negative_reviews.sample(n=10, random_state=42)
-
-for index, row in sample_neg_reviews.iterrows():
-    print(f"Review: {' '.join(row['cleaned_text'])}")
-    print(f"Sentiment score: {row['sentiment_score']}\n")
-
-positive_reviews = df[df['sentiment_score']>0]
-sample_pos_reviews = positive_reviews.sample(n=10, random_state=42)
-for index, row in sample_pos_reviews.iterrows():
-    print(f"Review: {' '.join(row['cleaned_text'])}")
-    print(f"Sentiment score: {row['sentiment_score']}\n")
-
-### Overall sentiment using AFINN shows that game rarely gets below a nuetral (0) but also has just as many users with positive sentiment as nuetral
-
-###Need to SentiWordNet include POS_TAG
